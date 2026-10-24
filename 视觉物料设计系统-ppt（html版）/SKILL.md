@@ -20,6 +20,19 @@
 
 ## 2. 工作流（照做）
 
+### 第 0 步：环境自检（30 秒，一次性）
+
+```powershell
+.\scripts\doctor.ps1          # Windows
+bash scripts/doctor.sh        # macOS / Linux
+```
+
+检查 node / python / 浏览器。缺 node 时它会提示；本机没装全局 Node 时，用环境变量指向可用的 node.exe：
+
+```powershell
+$env:QA_NODE = "C:\path\to\node.exe"      # 或传参 -Node <路径>
+```
+
 ### 第 1 步：复制模板
 
 ```bash

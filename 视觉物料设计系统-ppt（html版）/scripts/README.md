@@ -2,6 +2,14 @@
 
 一个一键脚本 + 三个独立工具，零第三方依赖（Node 内置 / Python 标准库 + Pillow 可选）。
 
+## 0. doctor — 环境自检（先跑这个）
+
+```powershell
+.\scripts\doctor.ps1
+```
+
+报出 node / python / 浏览器 / Pillow 是否就绪与缺失时的修复方法。本机没有全局 Node 时：`$env:QA_NODE = "C:\path\to\node.exe"`。
+
 ## 一键（推荐）
 
 ```powershell
