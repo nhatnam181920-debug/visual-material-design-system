@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """make-pdf.py — 把 qa-deck.cjs 的逐页截图拼成 16:9 静态 PDF 备份。
 
 用法：
@@ -11,6 +11,10 @@
 """
 import io
 import sys
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 from pathlib import Path
 
 try:

@@ -8,10 +8,11 @@
 ```bash
 cp styles/8bit-orbit/template.html 我的演示.html     # 或用 glass-neon
 # 改 <section> 里的文字与结构
-python scripts/bundle-assets.py 我的演示.html 我的演示-单文件.html
-node scripts/qa-deck.cjs 我的演示-单文件.html ./qa
-python scripts/make-pdf.py ./qa 我的演示.pdf
+.\scripts\build.ps1 -Deck .\我的演示.html            # Windows：一键打包+验收+PDF
+bash scripts/build.sh 我的演示.html                  # macOS/Linux
 ```
+
+验收会**自动拉起浏览器**，逐页检查溢出/垂直平衡/键盘翻页/占位文案/媒体/外链，并出截图与 PDF。看到 `ALL PASSED` 才算完。
 
 详细契约见 [SKILL.md](SKILL.md)（Agent 入口）与 [DESIGN.md](DESIGN.md)（风格选择）。
 

@@ -52,35 +52,40 @@ cp styles/<风格>/template.html 我的演示.html
 | 收尾金句 | `.quote` | `.statement` + `.close-center` |
 | 图片 | `.slot` 里放 `<img>` | `.img-slot` 里放 `<img>` |
 
-### 第 4 步：打包成单文件（离线交付）
+**更多版式**：每套风格的 `recipes.md` 里有额外 4 种可直接复制的版式（对比页 / 三条并列 / 金句转场 / 行动页 / 议程页 / 大长框 / 时间线 / CTA），比模板多覆盖常见页型。
 
-模板引用了 `styles/8bit-orbit/fonts/` 的相对字体；要「一个文件带走」时：
+### 第 4 步：一条命令完成打包 + 验收 + PDF
+
+```bash
+# Windows
+.\scripts\build.ps1 -Deck .\我的演示.html
+
+# macOS / Linux
+bash scripts/build.sh 我的演示.html
+```
+
+这一条命令会依次做三件事（**不需要手动开浏览器**，QA 脚本会自动拉起）：
+
+1. `bundle-assets.py` 把所有外部资源内嵌成 `<名字>-单文件.html`，并校验零外链
+2. `qa-deck.cjs` 自动起浏览器跑验收（页数/溢出/平衡/字体/媒体/键盘翻页/占位文案/外链/JS 异常），逐页截图
+3. `make-pdf.py` 把截图拼成 16:9 PDF 备份
+
+失败时不会生成 PDF，直接看 `qa/report.json` 与终端输出。也可以单独跑某一步：
 
 ```bash
 python scripts/bundle-assets.py 我的演示.html 我的演示-单文件.html
-# 把 <link>、相对图片、字体 woff2 全部转成 data URI，并校验无外部引用
-```
-
-glass-neon 用系统字体，本身无外部资源，可跳过此步（或跑一次校验）。
-
-### 第 5 步：验收（必须跑，不通过不交付）
-
-```bash
-# 1) 起浏览器调试端口（Windows 示例）
-msedge --headless=new --remote-debugging-port=9222 --user-data-dir=%TEMP%\deck-qa about:blank
-
-# 2) 跑验收：页数/溢出/字体/媒体/垂直平衡 + 逐页截图
 node scripts/qa-deck.cjs 我的演示-单文件.html ./qa 1920 1080
-
-# 3) 出静态 PDF 备份
 python scripts/make-pdf.py ./qa 我的演示.pdf
 ```
 
-**验收通过标准**：见 [docs/验收标准.md](docs/验收标准.md)。核心三条：
-1. 内容元素**零溢出**（装饰层允许故意出血）
-2. 每页内容**垂直居中**或**均匀分布**，不出现「上挤下空」
-3. 页面**零外部依赖**（断网可播），键盘 ← → / 空格可翻页
+### 第 5 步：看验收结论
 
+| 输出 | 含义 |
+|---|---|
+| `ALL PASSED` | 可以交付 |
+| `FAILED: N item(s)` | 逐条修复：溢出→缩字号/改布局；偏→加 `.content-mid`；tight→删内容或放大组件；占位→改成真实内容 |
+
+**注意**：直接对模板跑 QA 会报「未替换的模板占位文案」——这是预期的，模板不是成品。改完内容再跑就是 0 处。
 ## 3. 硬性技术契约
 
 | 项 | 要求 |
@@ -91,6 +96,8 @@ python scripts/make-pdf.py ./qa 我的演示.pdf
 | 可打印 | Ctrl+P 每页一张（glass-neon 自带浅底反转；8bit-orbit 用 `@page 1920px 1080px`） |
 | 可维护 | 内容在 `<section>` 里，样式在 `<style>` 里，令牌在 `:root` |
 | 无障碍 | 每页 `aria-label`；`prefers-reduced-motion` 时关闭动效 |
+| 运行环境 | Node 18+、Python 3.10+（Pillow 可选）、Chrome/Edge（QA 自动拉起） |
+| 文件编码 | `.ps1` = UTF-8 带 BOM；`.js/.cjs/.py/.html/.md` = UTF-8 无 BOM |
 
 ## 4. 质量标准（比现有更高）
 
@@ -112,13 +119,15 @@ python scripts/make-pdf.py ./qa 我的演示.pdf
 │   ├── glass-neon/
 │   │   ├── DESIGN.md         ← 完整设计系统（令牌/组件/规则）
 │   │   ├── template.html     ← 可复用模板（5 页示例，全部组件）
+│   │   ├── recipes.md        ← 额外 4 种版式配方（复制即用）
 │   │   └── _base.css         ← 抽取的样式基座（供再生成模板）
 │   └── 8bit-orbit/
 │       ├── DESIGN.md
 │       ├── template.html
+│       ├── recipes.md
 │       ├── _base.css
-│       └── fonts/            ← 拉丁展示字体子集（woff2）
-├── scripts/                  ← 打包 / 验收 / 截图 / PDF
+│       └── fonts/            ← 拉丁展示字体子集（woff2，模板内已内嵌）
+├── scripts/                  ← build.ps1/sh（一键） + 打包 / 验收 / PDF
 ├── examples/                 ← 两套成品参考（真实路演稿）
 └── docs/                     ← 验收标准 / 字体与资源 / 常见问题
 ```
@@ -128,9 +137,12 @@ python scripts/make-pdf.py ./qa 我的演示.pdf
 1. **8bit-orbit 内容堆在上半页**：忘了给内容包 `.content-mid`（`flex:1; justify-content:center`）
 2. **高亮行看不清**：`.spec-flow tr.you` 必须实心青底 + 深蓝字；浅色半透明底 + 深字对比度不足
 3. **标题不居中**：`max-width` 块要配 `margin-inline:auto`，否则文字在块内居中但块本身靠左
-4. **字体不生效**：8bit-orbit 的 woff2 路径是相对 `styles/8bit-orbit/` 的；移动模板文件时要同步移动 `fonts/`
-5. **打包后仍有外链**：跑 `bundle-assets.py` 会校验，出现外部引用会报错
-6. **打印黑屏**：glass-neon 的 print 样式会反转浅底；8bit-orbit 需要 `@page` 尺寸，模板已带
+4. **打包后仍有外链**：跑 `bundle-assets.py` 会校验，出现外部引用会报错
+5. **打印黑屏**：glass-neon 的 print 样式会反转浅底；8bit-orbit 需要 `@page` 尺寸，模板已带
+6. **对模板跑 QA 报「占位文案」**：预期行为（模板不是成品）；改完内容再跑应为 0 处
+7. **脚本编码（Windows）**：`.ps1` 必须 UTF-8 **带 BOM**（PowerShell 5.1 否则按 GBK 解析，中文注释直接导致语法错误）；`.js/.cjs/.py/.html` 必须 UTF-8 **不带 BOM**（Node 会把 BOM 当语法错误）
+8. **找不到 node / python**：`build.ps1` 会自动在 PATH 与常见安装目录找；找不到时用 `-Node <路径> -Python <路径>` 指定
+9. **QA 需要浏览器**：`qa-deck.cjs` 会自动拉起 Chrome/Edge（无需手动开端口）；连不上时设 `QA_BROWSER=<路径>` 或 `QA_PORT=<已开端口>`
 
 ## 7. 扩展新风格
 
