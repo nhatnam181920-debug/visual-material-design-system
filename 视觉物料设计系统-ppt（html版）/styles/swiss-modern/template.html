@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>16:9 演示模板 · Swiss Modern（瑞士国际主义）</title>
+<!--
+  设计系统：swiss-modern
+  - 黑白红三色、Helvetica 一种字体、12 列网格、严格左对齐
+  - 装饰只有线与数字：无圆角/阴影/渐变/氛围层
+  - 设计语言参考 reveal.js white/serif 主题（MIT），按本仓库单文件契约重写
+  - 导航：← → 空格翻页 · P 打印
+  改内容：只改 <section> 里的文字与结构
+-->
+<style>
+/* ============================================================
+   固定 1920x1080 舞台基座（16:9 整体缩放，不重排内容）
+   ============================================================ */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#8a8a8a}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:#8a8a8a}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:#FFFFFF}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:none;flex-direction:column;background:#FFFFFF}
+.slide.active{display:flex;animation:sIn .3s ease both}
+@keyframes sIn{from{opacity:0}to{opacity:1}}
+.slide.active>*{animation:rise .45s cubic-bezier(.22,.68,.3,1) both}
+.slide.active>*:nth-child(2){animation-delay:.08s}
+.slide.active>*:nth-child(3){animation-delay:.16s}
+.slide.active>*:nth-child(4){animation-delay:.24s}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@page{size:1920px 1080px;margin:0}
+
+/* ============================================================
+   Swiss Modern 令牌
+   ============================================================ */
+*{box-sizing:border-box}
+:root{
+  --ink:#111111;
+  --paper:#FFFFFF;
+  --red:#E4032E;
+  --blue:#0B4EA2;
+  --rule:#111111;
+  --grey:#555555;
+  --grid:rgba(17,17,17,.045);
+  --pad-x:96px;
+  --content-w:1400px;
+}
+.slide{
+  font-family:"Helvetica Neue",Helvetica,Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+  color:var(--ink);
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:calc(100% / 12) 96px;
+  padding:112px var(--pad-x) 96px;
+}
+.slide.band{background:var(--red);color:#fff}
+
+/* ---------- 页眉 / 页脚（绝对定位相对内边距盒，用 0 + 内部 padding） ---------- */
+.swiss-head{
+  position:absolute;top:0;left:0;right:0;
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:0 var(--pad-x);border-top:2px solid var(--rule);padding-top:22px;
+  font-size:18px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+}
+.swiss-foot{
+  position:absolute;bottom:0;left:0;right:0;
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:0 var(--pad-x);border-top:1px solid var(--rule);padding-top:16px;
+  font-size:16px;font-weight:400;color:var(--grey);
+}
+.slide.band .swiss-head,.slide.band .swiss-foot{border-color:#fff;color:#fff}
+
+/* ---------- 内容区 ---------- */
+.swiss-body{flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+.swiss-title{font-size:72px;font-weight:700;line-height:1.12;letter-spacing:-.02em;margin:0 0 22px;max-width:var(--content-w)}
+.swiss-sub{font-size:34px;font-weight:400;line-height:1.4;color:var(--grey);margin:0 0 34px;max-width:var(--content-w)}
+.swiss-lead{font-size:26px;font-weight:400;line-height:1.55;color:var(--ink);margin:0 0 26px;max-width:var(--content-w)}
+.mark{color:var(--red);font-weight:700}
+.swiss-label{font-size:18px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--red);margin:0 0 18px}
+
+/* ---------- 数据组 ---------- */
+.swiss-stats{display:flex;gap:0;border-top:2px solid var(--rule);border-bottom:1px solid var(--rule)}
+.swiss-stats .st{flex:1;padding:30px 34px 26px;border-left:1px solid var(--rule)}
+.swiss-stats .st:first-child{border-left:none;padding-left:0}
+.swiss-stats .n{font-size:96px;font-weight:700;line-height:.95;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.swiss-stats .n small{font-size:28px;font-weight:700;letter-spacing:0}
+.swiss-stats .l{font-size:22px;font-weight:400;color:var(--grey);margin-top:12px;line-height:1.4}
+.slide.band .swiss-stats{border-color:#fff}
+.slide.band .swiss-stats .st{border-left-color:rgba(255,255,255,.4)}
+.slide.band .swiss-stats .l{color:rgba(255,255,255,.8)}
+
+/* ---------- 分栏 ---------- */
+.swiss-2col{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:2px solid var(--rule)}
+.swiss-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:2px solid var(--rule)}
+.swiss-2col>*,.swiss-3col>*{padding:26px 34px 24px;border-left:1px solid var(--rule)}
+.swiss-2col>*:first-child,.swiss-3col>*:first-child{border-left:none;padding-left:0}
+.swiss-2col h3,.swiss-3col h3{font-size:34px;font-weight:700;margin:0 0 12px;line-height:1.2}
+.swiss-2col p,.swiss-3col p{font-size:23px;font-weight:400;line-height:1.6;color:var(--grey);margin:0}
+.swiss-2col p b,.swiss-3col p b{color:var(--ink);font-weight:700}
+.slide.band .swiss-2col,.slide.band .swiss-3col{border-color:#fff}
+.slide.band .swiss-2col>*,.slide.band .swiss-3col>*{border-left-color:rgba(255,255,255,.4)}
+.slide.band .swiss-2col p,.slide.band .swiss-3col p{color:rgba(255,255,255,.82)}
+.slide.band .swiss-2col p b,.slide.band .swiss-3col p b{color:#fff}
+
+/* ---------- 编号列表 ---------- */
+.swiss-list{list-style:none;padding:0;margin:0;border-top:2px solid var(--rule)}
+.swiss-list li{display:grid;grid-template-columns:110px 1fr;gap:26px;align-items:baseline;
+  padding:22px 0;border-bottom:1px solid var(--rule)}
+.swiss-list .no{font-size:44px;font-weight:700;color:var(--red);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.swiss-list .tx{font-size:26px;font-weight:400;line-height:1.5}
+.swiss-list .tx b{font-weight:700}
+.slide.band .swiss-list{border-color:#fff}
+.slide.band .swiss-list li{border-bottom-color:rgba(255,255,255,.4)}
+.slide.band .swiss-list .tx{color:#fff}
+
+/* ---------- 表格 ---------- */
+.swiss-table{width:100%;border-collapse:collapse}
+.swiss-table th,.swiss-table td{text-align:left;padding:16px 20px;border-bottom:1px solid var(--rule);
+  font-size:24px;font-weight:400;line-height:1.45;vertical-align:top}
+.swiss-table th{border-bottom:2px solid var(--rule);font-size:18px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;padding-bottom:14px}
+.swiss-table tr:last-child td{border-bottom:none}
+.swiss-table td.k{font-weight:700;white-space:nowrap}
+.slide.band .swiss-table th,.slide.band .swiss-table td{border-bottom-color:rgba(255,255,255,.4)}
+
+/* ---------- 大字引言 ---------- */
+.swiss-quote{font-size:80px;font-weight:700;line-height:1.18;letter-spacing:-.02em;margin:0;max-width:1500px}
+.swiss-quote .mark{color:var(--red)}
+.slide.band .swiss-quote .mark{color:#fff;text-decoration:underline;text-decoration-thickness:6px;text-underline-offset:10px}
+
+/* ---------- 封面 / 结尾 ---------- */
+.swiss-cover{flex:1;display:flex;flex-direction:column;justify-content:center}
+.swiss-cover .kicker{font-size:20px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--red);margin:0 0 30px}
+.swiss-cover h1{font-size:150px;font-weight:700;line-height:1.02;letter-spacing:-.025em;margin:0}
+.swiss-cover .rule{width:180px;height:8px;background:var(--red);margin:38px 0 30px}
+.swiss-cover .lead{font-size:34px;font-weight:400;line-height:1.45;color:var(--grey);max-width:1100px;margin:0}
+.swiss-cover .badges{margin-top:44px;display:flex;gap:16px;flex-wrap:wrap}
+.swiss-cover .bd{border:2px solid var(--ink);padding:12px 22px;font-size:22px;font-weight:700}
+.swiss-cover .bd.red{border-color:var(--red);color:var(--red)}
+.slide.band .swiss-cover .rule{background:#fff}
+.slide.band .swiss-cover .bd{border-color:#fff;color:#fff}
+.slide.band .swiss-cover .bd.red{background:#fff;color:var(--red)}
+</style>
+</head>
+<body>
+<div class="deck-viewport"><main class="deck-stage">
+
+<!-- 1 封面 -->
+<section class="slide active" data-slide-id="cover">
+  <div class="swiss-head"><span>产品名 · 一句话定位</span><span>2026</span></div>
+  <div class="swiss-cover">
+    <p class="kicker">章节标签放这里</p>
+    <h1>主标题第一行，<br><span class="mark">强调词在第二行</span></h1>
+    <div class="rule"></div>
+    <p class="lead">一句话把产品讲清楚。第二句补关键信息，第三句给行动指向。</p>
+    <div class="badges">
+      <span class="bd red">结果一</span>
+      <span class="bd">结果二</span>
+      <span class="bd">结果三</span>
+    </div>
+  </div>
+  <div class="swiss-foot"><span>署名 / 团队</span><span>01 / 05</span></div>
+</section>
+
+<!-- 2 数据页 -->
+<section class="slide" data-slide-id="numbers">
+  <div class="swiss-head"><span>章节 · 成果</span><span>02 / 05</span></div>
+  <div class="swiss-body">
+    <p class="swiss-label">先看结果</p>
+    <h2 class="swiss-title">一句结论，<span class="mark">关键词标红</span></h2>
+    <div class="swiss-stats" style="margin-top:10px">
+      <div class="st"><div class="n" data-count-to="15000" data-count-format="comma">15000</div><div class="l">指标一<br>补充口径</div></div>
+      <div class="st"><div class="n" data-count-to="10000" data-count-format="comma" data-count-prefix="¥ ">¥ 10000</div><div class="l">指标二<br>补充口径</div></div>
+      <div class="st"><div class="n" data-count-to="30" data-count-suffix=" 分钟">30 分钟</div><div class="l">指标三<br>补充口径</div></div>
+    </div>
+    <p class="swiss-lead" style="margin-top:34px">一句把因果讲透的话，<b>加粗只给关键处</b>。</p>
+  </div>
+  <div class="swiss-foot"><span>来源：填写数据来源与日期</span><span>02 / 05</span></div>
+</section>
+
+<!-- 3 三栏能力页 -->
+<section class="slide" data-slide-id="three">
+  <div class="swiss-head"><span>章节 · 能力</span><span>03 / 05</span></div>
+  <div class="swiss-body">
+    <h2 class="swiss-title">三件事同时成立，<span class="mark">才叫系统</span></h2>
+    <div class="swiss-3col" style="margin-top:8px">
+      <div>
+        <h3>01 真实成片</h3>
+        <p>两行说明，把证据讲清楚。<b>加粗只给结论</b>。</p>
+      </div>
+      <div>
+        <h3>02 多套模板</h3>
+        <p>两行说明，把机制讲清楚。</p>
+      </div>
+      <div>
+        <h3>03 数据回流</h3>
+        <p>两行说明，把闭环讲清楚。</p>
+      </div>
+    </div>
+  </div>
+  <div class="swiss-foot"><span>署名 / 团队</span><span>03 / 05</span></div>
+</section>
+
+<!-- 4 编号列表页 -->
+<section class="slide" data-slide-id="steps">
+  <div class="swiss-head"><span>章节 · 工作流</span><span>04 / 05</span></div>
+  <div class="swiss-body">
+    <h2 class="swiss-title">五步流程，<span class="mark">每步都有分工</span></h2>
+    <ol class="swiss-list" style="margin-top:8px">
+      <li><span class="no">01</span><span class="tx"><b>步骤一</b> —— 做什么、用什么</span></li>
+      <li><span class="no">02</span><span class="tx"><b>步骤二</b> —— 做什么、用什么</span></li>
+      <li><span class="no">03</span><span class="tx"><b>步骤三</b> —— 唯一的人工环节</span></li>
+      <li><span class="no">04</span><span class="tx"><b>步骤四</b> —— 做什么、用什么</span></li>
+      <li><span class="no">05</span><span class="tx"><b>步骤五</b> —— 闭环回到起点</span></li>
+    </ol>
+  </div>
+  <div class="swiss-foot"><span>署名 / 团队</span><span>04 / 05</span></div>
+</section>
+
+<!-- 5 转场色块页 -->
+<section class="slide band" data-slide-id="quote">
+  <div class="swiss-head"><span>转折</span><span>05 / 05</span></div>
+  <div class="swiss-body">
+    <p class="swiss-quote">一句可以被引用的话，<br><span class="mark">把核心判断留下</span>。</p>
+  </div>
+  <div class="swiss-foot"><span>署名 / 团队</span><span>05 / 05</span></div>
+</section>
+
+</main></div>
+
+<nav class="nav" style="position:fixed;right:24px;bottom:20px;z-index:100;display:flex;gap:8px;align-items:center;
+  background:#fff;border:2px solid #111;padding:6px 10px;font:700 14px/1 Helvetica,Arial,sans-serif;color:#111">
+  <span id="page">1 / 5</span>
+  <button id="prev" style="border:1px solid #111;background:#fff;font:inherit;padding:2px 8px;cursor:pointer">‹</button>
+  <button id="next" style="border:1px solid #111;background:#fff;font:inherit;padding:2px 8px;cursor:pointer">›</button>
+</nav>
+<p style="position:fixed;right:24px;bottom:64px;z-index:100;font:400 12px/1 Helvetica,Arial,sans-serif;color:#888">← → 空格翻页 · P 打印</p>
+<div id="prog" style="position:fixed;left:0;top:0;height:4px;background:#E4032E;z-index:100;width:20%"></div>
+
+<script>
+(function(){
+  'use strict';
+  var stage = document.querySelector('.deck-stage');
+  var slides = [].slice.call(document.querySelectorAll('.slide'));
+  var cur = 0;
+  function fit(){
+    var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    stage.style.transform = 'translate(' + ((window.innerWidth - 1920 * s) / 2) + 'px,' +
+      ((window.innerHeight - 1080 * s) / 2) + 'px) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  function show(n){
+    cur = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function(s, k){ s.classList.toggle('active', k === cur); });
+    document.getElementById('page').textContent = (cur + 1) + ' / ' + slides.length;
+    document.getElementById('prog').style.width = ((cur + 1) / slides.length * 100) + '%';
+    enter(slides[cur]);
+  }
+  function enter(slide){
+    if (slide.getAttribute('data-done') === '1') return;
+    slide.setAttribute('data-done', '1');
+    slide.querySelectorAll('[data-count-to]').forEach(function(el, k){
+      var to = parseFloat(el.getAttribute('data-count-to'));
+      var dec = parseInt(el.getAttribute('data-count-decimals') || '0', 10);
+      var comma = el.getAttribute('data-count-format') === 'comma';
+      var pre = el.getAttribute('data-count-prefix') || '';
+      var suf = el.getAttribute('data-count-suffix') || '';
+      var t0 = null, DUR = 1000;
+      function fmt(v){ var n = v.toFixed(dec); if (comma) n = Number(n).toLocaleString('en-US'); return pre + n + suf; }
+      function step(ts){
+        if (!t0) t0 = ts;
+        var p = Math.min(1, (ts - t0) / DUR);
+        el.textContent = fmt(to * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) requestAnimationFrame(step); else el.textContent = fmt(to);
+      }
+      setTimeout(function(){ requestAnimationFrame(step); }, 220 + k * 150);
+    });
+  }
+  document.getElementById('prev').onclick = function(){ show(cur - 1); };
+  document.getElementById('next').onclick = function(){ show(cur + 1); };
+  document.addEventListener('keydown', function(e){
+    if (['ArrowRight','ArrowDown','PageDown',' '].indexOf(e.key) >= 0){ e.preventDefault(); show(cur + 1); }
+    if (['ArrowLeft','ArrowUp','PageUp'].indexOf(e.key) >= 0){ e.preventDefault(); show(cur - 1); }
+    if (e.key === 'Home'){ e.preventDefault(); show(0); }
+    if (e.key === 'End'){ e.preventDefault(); show(slides.length - 1); }
+    if (e.key === 'p' || e.key === 'P'){ e.preventDefault(); window.print(); }
+  });
+  var x0 = null;
+  document.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    if (x0 === null) return;
+    var dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1));
+    x0 = null;
+  }, {passive:true});
+  show(0);
+})();
+</script>
+</body>
+</html>

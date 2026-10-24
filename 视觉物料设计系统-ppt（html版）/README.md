@@ -24,8 +24,9 @@ bash scripts/build.sh 我的演示.html                  # macOS/Linux
 | 适用 | 路演、产品介绍、数据汇报、商业计划 | 黑客松、产品发布、技术分享 |
 | 字体 | 系统字体（零依赖） | Tektur / Chakra Petch / Space Mono（内嵌）+ 系统中文字体 |
 | 画布 | 视口 vw/vh（16:9 屏幕等比） | 固定 1920×1080 整体缩放 |
-| 模板 | [template.html](styles/glass-neon/template.html) | [template.html](styles/8bit-orbit/template.html) |
-| 设计文档 | [DESIGN.md](styles/glass-neon/DESIGN.md) | [DESIGN.md](styles/8bit-orbit/DESIGN.md) |
+| 模板 | [template.html](styles/glass-neon/template.html) | [template.html](styles/8bit-orbit/template.html) | [template.html](styles/swiss-modern/template.html) | [template.html](styles/editorial-serif/template.html) |
+| 设计文档 | [DESIGN.md](styles/glass-neon/DESIGN.md) | [DESIGN.md](styles/8bit-orbit/DESIGN.md) | [DESIGN.md](styles/swiss-modern/DESIGN.md) | [DESIGN.md](styles/editorial-serif/DESIGN.md) |
+| 版式配方 | [recipes.md](styles/glass-neon/recipes.md) | [recipes.md](styles/8bit-orbit/recipes.md) | [recipes.md](styles/swiss-modern/recipes.md) | [recipes.md](styles/editorial-serif/recipes.md) |
 
 ## 仓库结构
 
