@@ -1,0 +1,10 @@
+﻿# 临时/验收产物
+_qa*/
+qa/
+*.log
+.DS_Store
+Thumbs.db
+# 构建临时
+_build/
+__pycache__/
+*.pyc

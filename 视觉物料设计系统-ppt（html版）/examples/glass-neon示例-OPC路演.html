@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一个人的爆款复制工厂 · 三平台自动选品 × OPC 工作流</title>
+<style>
+/* ============================================================
+   设计令牌（HSL 体系）
+   ============================================================ */
+:root{
+  --bg:240 8% 4%;          --bg-2:240 8% 6%;
+  --fg:40 20% 97%;         --fg-2:35 10% 72%;      --fg-3:35 8% 52%;
+  --hot:8 100% 59%;        --hot-2:8 100% 70%;
+  --amber:38 100% 58%;
+  --teal:188 78% 55%;      --teal-2:188 70% 74%;
+  --line:0 0% 100% / .09;  --line-2:0 0% 100% / .16;
+  --glass:0 0% 100% / .035;
+  --ease:cubic-bezier(.22,.68,.3,1);
+  --pad:5.5vh 8vw;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei","Hiragino Sans GB",system-ui,sans-serif;
+  background:hsl(var(--bg));color:hsl(var(--fg));overflow:hidden;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  font-feature-settings:"tnum" 1;
+}
+
+/* ---------- 氛围层 ---------- */
+.atmos{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.atmos i{position:absolute;display:block;border-radius:50%;filter:blur(90px);will-change:transform}
+.atmos .a{width:52vw;height:52vw;left:-16vw;top:-20vw;background:radial-gradient(circle,hsl(var(--hot) / .30),transparent 66%);animation:d1 30s ease-in-out infinite alternate}
+.atmos .b{width:44vw;height:44vw;right:-12vw;top:4vh;background:radial-gradient(circle,hsl(var(--amber) / .16),transparent 66%);animation:d2 36s ease-in-out infinite alternate}
+.atmos .c{width:48vw;height:48vw;left:24vw;bottom:-22vw;background:radial-gradient(circle,hsl(var(--teal) / .14),transparent 66%);animation:d3 42s ease-in-out infinite alternate}
+@keyframes d1{to{transform:translate3d(8vw,6vh,0) scale(1.16)}}
+@keyframes d2{to{transform:translate3d(-7vw,8vh,0) scale(1.12)}}
+@keyframes d3{to{transform:translate3d(6vw,-7vh,0) scale(1.18)}}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.055;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");}
+.gridlines{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(hsl(var(--line)) 1px,transparent 1px),linear-gradient(90deg,hsl(var(--line)) 1px,transparent 1px);
+  background-size:100% 12.5vh, 8.333vw 100%;}
+
+/* ============================================================
+   幻灯片骨架
+   ============================================================ */
+.deck{position:relative;z-index:2;height:100%}
+.slide{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:var(--pad);opacity:0;overflow-y:auto;overflow-x:hidden}
+.slide.active{display:flex;opacity:1;animation:sIn .6s var(--ease) both}
+@keyframes sIn{from{opacity:0;transform:translateY(14px) scale(.993);filter:blur(7px)}to{opacity:1;transform:none;filter:none}}
+.slide.active>*{animation:rise .68s var(--ease) both}
+.slide.active>*:nth-child(1){animation-delay:.06s}
+.slide.active>*:nth-child(2){animation-delay:.15s}
+.slide.active>*:nth-child(3){animation-delay:.24s}
+.slide.active>*:nth-child(4){animation-delay:.33s}
+.slide.active>*:nth-child(5){animation-delay:.42s}
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+
+/* ---------- 文字：大字号配轻字重 ---------- */
+.kicker{display:flex;align-items:center;gap:1vw;font-size:1vw;color:hsl(var(--hot-2));letter-spacing:.3em;font-weight:600;text-transform:uppercase;margin-bottom:2vh}
+.kicker::before{content:"";width:2.4vw;height:1px;background:hsl(var(--hot));flex:none}
+.kicker.teal{color:hsl(var(--teal-2))}
+.kicker.teal::before{background:hsl(var(--teal))}
+h1{font-size:4.9vw;line-height:1.08;font-weight:600;letter-spacing:-.025em;color:hsl(var(--fg))}
+h1 em{font-style:normal;font-weight:800;color:hsl(var(--hot))}
+h2{font-size:2.8vw;line-height:1.16;font-weight:600;letter-spacing:-.018em;color:hsl(var(--fg));max-width:26ch}
+h2 em{font-style:normal;font-weight:800;color:hsl(var(--hot))}
+h3{font-size:1.32vw;font-weight:700;color:hsl(var(--fg));letter-spacing:.04em;margin-bottom:1.5vh}
+h3 .en{font-size:.72em;font-weight:500;color:hsl(var(--fg-3));letter-spacing:.16em;margin-left:.6em}
+.lead{font-size:1.78vw;line-height:1.62;color:hsl(var(--fg-2));margin-top:2.4vh;max-width:52ch;font-weight:400}
+.lead b{color:hsl(var(--fg));font-weight:600}
+.lead .hl{color:hsl(var(--hot-2));font-weight:600}
+p,li,td,th{font-size:1.5vw;line-height:1.62;color:hsl(var(--fg-2))}
+b,strong{color:hsl(var(--fg));font-weight:600}
+.src{font-size:.85vw;color:hsl(var(--fg-3));margin-top:2.2vh;line-height:1.6;max-width:84ch;letter-spacing:.01em}
+.src b{color:hsl(var(--fg-2));font-weight:500}
+
+/* ---------- 幽灵序号 ---------- */
+.ghost{position:absolute;right:4vw;top:50%;transform:translateY(-50%);
+  font-size:26vw;font-weight:800;line-height:.8;letter-spacing:-.05em;
+  color:hsl(var(--fg) / .028);pointer-events:none;user-select:none;z-index:0}
+.slide>*:not(.ghost){position:relative;z-index:1}
+
+/* ---------- 徽章 ---------- */
+.badge{display:inline-flex;align-items:center;gap:.55em;font-size:.98vw;font-weight:600;
+  padding:.55vh 1vw;border-radius:999px;border:1px solid hsl(var(--line-2));
+  background:hsl(var(--glass));color:hsl(var(--fg-2));letter-spacing:.05em;backdrop-filter:blur(8px)}
+.badge .dot{width:.48vw;height:.48vw;border-radius:50%;background:hsl(var(--hot));box-shadow:0 0 10px hsl(var(--hot))}
+
+/* ---------- 步骤指示器（工作流 5 页连贯导航） ---------- */
+.steps-ind{display:flex;align-items:center;gap:.55vw;margin-bottom:2.2vh}
+.steps-ind .si{display:flex;align-items:center;gap:.45vw;font-size:.88vw;font-weight:700;letter-spacing:.12em;color:hsl(var(--fg-3))}
+.steps-ind .si .d{width:.44vw;height:.44vw;border-radius:50%;background:hsl(var(--fg-3));opacity:.55;flex:none}
+.steps-ind .si.done{color:hsl(var(--fg-2))}
+.steps-ind .si.done .d{background:hsl(var(--fg-2));opacity:.85}
+.steps-ind .si.on{color:hsl(var(--hot-2))}
+.steps-ind .si.on .d{background:hsl(var(--hot));opacity:1;box-shadow:0 0 10px hsl(var(--hot))}
+.steps-ind .ln{width:1.5vw;height:1px;background:hsl(var(--line-2));flex:none}
+
+/* ---------- 数字 ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:3.4vh;border-top:1px solid hsl(var(--line-2))}
+.stat{padding:2.6vh 1.3vw 2.2vh 0;border-right:1px solid hsl(var(--line));position:relative}
+.stat:last-child{border-right:0}
+.stat .n{font-size:4vw;font-weight:600;line-height:1;color:hsl(var(--fg));letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.stat .n small{font-size:.4em;font-weight:700;color:hsl(var(--hot));margin-left:.08em;letter-spacing:0}
+.stat .l{font-size:1.02vw;color:hsl(var(--fg-2));margin-top:1.3vh;line-height:1.45;max-width:14ch}
+.stat.hot .n{color:hsl(var(--hot))}
+.stat.hot::before{content:"";position:absolute;left:0;top:-1px;width:38%;height:2px;background:hsl(var(--hot));box-shadow:0 0 14px hsl(var(--hot))}
+
+/* ---------- 卡片 ---------- */
+.c2{display:grid;grid-template-columns:1fr 1fr;gap:1.4vw;margin-top:2.6vh}
+.card{background:hsl(var(--glass));border:1px solid hsl(var(--line));border-radius:16px;
+  padding:2.4vh 1.35vw;backdrop-filter:blur(12px);position:relative;overflow:hidden;
+  transition:transform .38s var(--ease),border-color .38s,background .38s}
+.card::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,hsl(var(--line-2)) 35%,hsl(var(--line-2)) 65%,transparent)}
+.card:hover{transform:translateY(-5px);border-color:hsl(var(--line-2));background:hsl(0 0% 100% / .06)}
+.card .idx{font-size:.88vw;font-weight:700;color:hsl(var(--hot-2));letter-spacing:.18em;margin-bottom:1.1vh}
+.card b{display:block;font-size:1.42vw;margin-bottom:.9vh;line-height:1.3;font-weight:700;color:hsl(var(--fg))}
+.card span{font-size:1.14vw;color:hsl(var(--fg-2));line-height:1.62;display:block}
+.card span i{font-style:normal;color:hsl(var(--hot-2));font-weight:600}
+.card span code{font-family:"SF Mono",ui-monospace,Consolas,monospace;font-size:.94em;
+  background:hsl(0 0% 100% / .08);padding:.05em .35em;border-radius:4px;color:hsl(var(--fg))}
+.card.teal{border-color:hsl(var(--teal) / .26);background:linear-gradient(180deg,hsl(var(--teal) / .09),hsl(var(--teal) / .02))}
+.card.teal .idx{color:hsl(var(--teal-2))}
+.card.teal b{color:hsl(var(--teal-2))}
+.card.teal span i{color:hsl(var(--teal-2))}
+.card.tech{background:linear-gradient(180deg,hsl(0 0% 100% / .05),hsl(0 0% 100% / .015))}
+.card.tech .idx{color:hsl(var(--amber))}
+
+/* ---------- 产出横条：每页拆解末尾，说明这一步做完手里有什么 ---------- */
+.yield{display:flex;align-items:baseline;gap:1.1vw;margin-top:2.2vh;padding:1.5vh 1.3vw;
+  border:1px solid hsl(var(--line-2));border-radius:10px;background:hsl(0 0% 100% / .028)}
+.yield .yl{font-size:.86vw;font-weight:800;letter-spacing:.2em;color:hsl(var(--hot-2));flex:none;text-transform:uppercase}
+.yield .yv{font-size:1.24vw;color:hsl(var(--fg-2));line-height:1.5}
+.yield .yv b{color:hsl(var(--fg));font-weight:700}
+.yield .yv i{font-style:normal;color:hsl(var(--hot-2));font-weight:600}
+
+/* ---------- 怎么做：编号步骤 ---------- */
+.asym{display:grid;grid-template-columns:7fr 5fr;gap:2.4vw;margin-top:2.4vh;align-items:start}
+.steps{list-style:none;padding:0}
+.steps li{padding:1.05vh 0 1.05vh 2.3vw;position:relative;border-bottom:1px solid hsl(var(--line));font-size:1.42vw;line-height:1.58;color:hsl(var(--fg-2))}
+.steps li:last-child{border-bottom:0}
+.steps li .sn{position:absolute;left:0;top:1.15vh;font-size:.92vw;font-weight:800;color:hsl(var(--hot-2));letter-spacing:.06em}
+.steps li b{color:hsl(var(--fg));font-weight:600}
+.steps li .tagline{display:block;font-size:1.05vw;color:hsl(var(--fg-3));margin-top:.35vh;line-height:1.5}
+
+/* ---------- 平台三列 ---------- */
+.plats{display:grid;grid-template-columns:repeat(3,1fr);gap:1.3vw;margin-top:2.8vh}
+.plat{background:hsl(var(--glass));border:1px solid hsl(var(--line));border-radius:16px;
+  padding:2.6vh 1.4vw;position:relative;overflow:hidden;backdrop-filter:blur(12px);
+  transition:transform .38s var(--ease),border-color .38s}
+.plat:hover{transform:translateY(-6px)}
+.plat .pt{font-size:.9vw;font-weight:700;letter-spacing:.18em;color:hsl(var(--fg-3));text-transform:uppercase}
+.plat h3{font-size:2.05vw;margin:1vh 0 1.4vh;font-weight:700;color:hsl(var(--fg))}
+.plat .role{display:inline-block;font-size:.92vw;font-weight:700;padding:.4vh .8vw;border-radius:999px;
+  background:hsl(var(--hot) / .16);color:hsl(var(--hot-2));border:1px solid hsl(var(--hot) / .3);margin-bottom:1.4vh}
+.plat.dy .role{background:hsl(var(--amber) / .16);color:hsl(38 100% 72%);border-color:hsl(var(--amber) / .3)}
+.plat.xy .role{background:hsl(var(--teal) / .16);color:hsl(var(--teal-2));border-color:hsl(var(--teal) / .3)}
+.plat ul{list-style:none;padding:0}
+.plat li{font-size:1.1vw;line-height:1.58;color:hsl(var(--fg-2));padding:.65vh 0 .65vh 1.05vw;position:relative;border-bottom:1px solid hsl(var(--line))}
+.plat li:last-child{border-bottom:0}
+.plat li::before{content:"";position:absolute;left:0;top:1.45vh;width:.38vw;height:.38vw;border-radius:50%;background:hsl(var(--fg-3))}
+.plat li b{color:hsl(var(--fg));font-weight:600}
+.plat .foot{margin-top:1.6vh;padding-top:1.3vh;border-top:1px solid hsl(var(--line-2));font-size:.96vw;color:hsl(var(--fg-3));line-height:1.55}
+
+/* ---------- 工作流全景 ---------- */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:.65vw;margin-top:2.8vh}
+.step{background:hsl(var(--glass));border:1px solid hsl(var(--line));border-radius:14px;
+  padding:2.2vh .85vw;position:relative;overflow:hidden;
+  transition:transform .38s var(--ease),border-color .38s}
+.step:hover{transform:translateY(-6px);border-color:hsl(var(--hot) / .4)}
+.step .no{font-size:.82vw;font-weight:700;color:hsl(var(--hot-2));letter-spacing:.2em}
+.step b{display:block;font-size:1.28vw;margin:.9vh 0 .8vh;line-height:1.26;font-weight:700;color:hsl(var(--fg))}
+.step span{font-size:.98vw;color:hsl(var(--fg-2));line-height:1.54;display:block}
+.step .who{margin-top:1.2vh;padding-top:1vh;border-top:1px dashed hsl(var(--line-2));
+  font-size:.86vw;color:hsl(var(--teal-2));font-weight:600}
+.step.fin{background:linear-gradient(180deg,hsl(var(--teal) / .12),hsl(var(--teal) / .02));border-color:hsl(var(--teal) / .3)}
+.step.fin .no,.step.fin .who{color:hsl(var(--teal-2))}
+
+/* ---------- 变现矩阵 ---------- */
+.matrix{display:grid;grid-template-columns:8.5vw repeat(3,1fr);gap:0;margin-top:2.4vh;border:1px solid hsl(var(--line-2));border-radius:14px;overflow:hidden}
+.matrix .mh{padding:1.6vh 1vw;background:hsl(0 0% 100% / .05);font-size:.95vw;font-weight:700;
+  color:hsl(var(--fg));letter-spacing:.06em;border-bottom:1px solid hsl(var(--line-2));text-align:center}
+.matrix .mh.first{text-align:left;color:hsl(var(--fg-3));font-size:.84vw;letter-spacing:.16em;text-transform:uppercase}
+.matrix .rh{padding:1.9vh 1vw;background:hsl(0 0% 100% / .03);border-bottom:1px solid hsl(var(--line));
+  border-right:1px solid hsl(var(--line-2));display:flex;flex-direction:column;justify-content:center;gap:.35vh}
+.matrix .rh .pn{font-size:1.18vw;font-weight:700;color:hsl(var(--fg))}
+.matrix .rh .pp{font-size:.96vw;font-weight:700;color:hsl(var(--hot-2))}
+.matrix .cell{padding:1.75vh 1vw;border-bottom:1px solid hsl(var(--line));border-right:1px solid hsl(var(--line));
+  font-size:1vw;line-height:1.52;color:hsl(var(--fg-2));min-height:9.2vh}
+.matrix .cell:last-child{border-right:0}
+.matrix .cell b{color:hsl(var(--fg));font-weight:600;display:block;margin-bottom:.4vh;font-size:1.06vw}
+.matrix .cell.hi{background:hsl(var(--hot) / .09)}
+.matrix .cell.hi b{color:hsl(var(--hot-2))}
+.matrix .cell.wt{background:hsl(0 0% 100% / .022)}
+.mrow{display:contents}
+
+/* ---------- 其他 ---------- */
+.big{font-size:2.25vw;font-weight:600;line-height:1.36;color:hsl(var(--fg));margin-top:3vh;letter-spacing:-.012em;max-width:36ch}
+.big em{font-style:normal;font-weight:800;color:hsl(var(--hot))}
+.quote{font-size:3.3vw;font-weight:600;line-height:1.22;text-align:center;letter-spacing:-.02em}
+.quote em{font-style:normal;font-weight:800;color:hsl(var(--hot))}
+.center{text-align:center}
+.rowpill{display:flex;gap:.55vw;flex-wrap:wrap;margin-top:2.4vh}
+.pill{display:inline-flex;align-items:center;gap:.5em;font-size:.96vw;font-weight:600;padding:.5vh .9vw;
+  border-radius:999px;border:1px solid hsl(var(--line-2));background:hsl(var(--glass));color:hsl(var(--fg-2));letter-spacing:.03em}
+.pill.hot{border-color:hsl(var(--hot) / .38);background:hsl(var(--hot) / .12);color:hsl(var(--hot-2))}
+.pill.teal{border-color:hsl(var(--teal) / .38);background:hsl(var(--teal) / .12);color:hsl(var(--teal-2))}
+.pill.amber{border-color:hsl(var(--amber) / .38);background:hsl(var(--amber) / .12);color:hsl(38 100% 72%)}
+#cost-chart{width:100%;height:25vh;margin-top:1.4vh}
+.hero{align-items:flex-end;justify-content:flex-end;padding-bottom:9vh}
+
+/* ---------- 导航 ---------- */
+.nav{position:fixed;bottom:2.4vh;right:3vw;z-index:20;display:flex;align-items:center;gap:.6em;
+  font-size:1vw;color:hsl(var(--fg-3));background:hsl(var(--bg) / .62);backdrop-filter:blur(14px);
+  padding:.6vh .9vw;border-radius:999px;border:1px solid hsl(var(--line))}
+.nav button{font:inherit;background:hsl(var(--hot));color:#fff;border:0;border-radius:6px;padding:.25em .85em;cursor:pointer;font-weight:700;transition:background .2s,transform .2s}
+.nav button:hover{background:hsl(var(--hot-2));transform:translateY(-1px)}
+.nav button:focus-visible{outline:2px solid hsl(var(--fg));outline-offset:2px}
+.prog{position:fixed;left:0;bottom:0;height:3px;z-index:21;background:linear-gradient(90deg,hsl(var(--hot)),hsl(var(--amber)));transition:width .4s var(--ease);box-shadow:0 0 14px hsl(var(--hot) / .6)}
+.hint{position:fixed;bottom:2.6vh;left:3vw;font-size:.84vw;color:hsl(var(--fg-3));z-index:20;letter-spacing:.07em}
+
+/* ============================================================
+   打印：反转浅底
+   ============================================================ */
+@media print{
+  body{background:#fff;overflow:visible;color:#1a1614}
+  .atmos,.grain,.gridlines{display:none}
+  .deck{height:auto}
+  .slide{position:relative;inset:auto;display:flex !important;opacity:1 !important;animation:none !important;
+    page-break-after:always;break-after:page;padding:5vh 5vw;min-height:94vh}
+  .slide>*{animation:none !important;opacity:1 !important;transform:none !important}
+  .ghost{display:none}
+  h1,h2,h3,.big,.quote,.stat .n,.card b,.step b,.plat h3,.matrix .mh,.matrix .rh .pn,td:first-child{color:#1a1614}
+  h1 em,h2 em,.big em,.quote em,.stat.hot .n,.card .idx,.step .no,.plat.xhs .role,td.price,.matrix .rh .pp,.matrix .cell.hi b,.steps li .sn{color:#c4161c}
+  .kicker{color:#c4161c}.kicker.teal{color:#155c6b}
+  p,li,td,th,.lead,.card span,.step span,.stat .l,.plat li,.matrix .cell,.pill,.badge,.plat .foot,.src,.steps li{color:#4a423e}
+  .card,.step,.stat,.plat,.matrix{background:#fff !important;border:1px solid #d8cfc9;backdrop-filter:none}
+  .plat .role,.pill.hot{background:#fdecec;color:#c4161c;border-color:#f0c4c6}
+  .plat.dy .role,.pill.amber{background:#fff6d9;color:#8a5c00;border-color:#f0d98a}
+  .plat.xy .role,.pill.teal,.card.teal .idx,.card.teal b,.step.fin .no,.step.fin .who,.card.tech .idx{background:#e7f2f5;color:#155c6b;border-color:#b9d8e0}
+  .card.teal,.step.fin,.stat.hot,.matrix .cell.hi{background:#f4fafb !important;border-color:#b9d8e0}
+  .steps-ind .si{color:#8a7f7a}.steps-ind .si.on{color:#c4161c}
+  .nav,.hint,.prog{display:none}
+  #cost-chart{height:150px}
+  h1{font-size:30pt}h2{font-size:19pt}.lead{font-size:11pt}p,li,td,th{font-size:10pt}
+  .kicker{font-size:7.5pt}.src{font-size:6.5pt}.stat .n{font-size:23pt}.stat .l{font-size:8.5pt}
+  .card b{font-size:10pt}.card span{font-size:8.5pt}.card .idx{font-size:7pt}
+  .step b{font-size:9.5pt}.step span{font-size:8pt}.step .no,.step .who{font-size:7pt}
+  .plat h3{font-size:12pt}.plat li{font-size:8pt}.plat .pt,.plat .role,.plat .foot{font-size:7pt}
+  .big{font-size:13pt}.quote{font-size:19pt}.matrix .mh{font-size:7.5pt}.matrix .cell{font-size:8pt}.matrix .rh .pn{font-size:9pt}.matrix .rh .pp{font-size:7.5pt}
+  .pill,.badge{font-size:7.5pt}.steps li{font-size:9.5pt}.steps li .sn{font-size:7pt}.steps li .tagline{font-size:8pt}
+  .steps-ind .si{font-size:7pt}
+}
+@media (max-width:820px){
+  .c2,.plats,.asym{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .matrix{grid-template-columns:16vw repeat(3,1fr)}
+  h1{font-size:8.5vw}h2{font-size:5.6vw}.lead{font-size:3.5vw;max-width:none}
+  p,li,td,th{font-size:2.9vw}.ghost{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="atmos" aria-hidden="true"><i class="a"></i><i class="b"></i><i class="c"></i></div>
+<div class="gridlines" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="deck">
+<main aria-live="polite">
+
+<!-- 1 封面 -->
+<section class="slide active hero" aria-label="第 1 页 封面">
+  <div class="ghost" aria-hidden="true">01</div>
+  <span class="badge"><span class="dot"></span>OPC · 一人公司 · 路演</span>
+  <h1 style="margin-top:2.6vh">一个人的<br><em>爆款复制工厂</em></h1>
+  <p class="lead" style="margin-top:3.2vh"><b>三平台自动选品 × 五步 OPC 工作流。</b>小红书种草、闲鱼成交、抖音看势。<br>引擎替我干活，我只做判断。</p>
+</section>
+
+<!-- 2 机会 -->
+<section class="slide" aria-label="第 2 页 机会">
+  <div class="ghost" aria-hidden="true">02</div>
+  <p class="kicker">机会</p>
+  <h2>三个平台，都在<em>往一个人倾斜</em></h2>
+  <div class="stats">
+    <div class="stat"><div class="n"><span data-count="3.7">0</span><small>×</small></div><div class="l">小红书虚拟商品<br>成交额同比增长</div></div>
+    <div class="stat"><div class="n"><span data-count="94">0</span><small>%</small></div><div class="l">小红书虚拟商家中<br>个人店占比</div></div>
+    <div class="stat"><div class="n"><span data-count="6">0</span><small>亿</small></div><div class="l">闲鱼累计<br>注册用户</div></div>
+    <div class="stat hot"><div class="n"><span data-count="5">0</span><small>%</small></div><div class="l">月入 1 万以上<br>商家占比</div></div>
+  </div>
+  <p class="lead"><span class="hl">94% 是个人店，只有 5% 月入过万。</span>差距不在勤奋——个人店老板普遍比上班还拼。<b>差距在选什么品、发什么内容。</b>而这两件事，恰好是机器比我强、我用机器补的部分。</p>
+  <p class="src">来源：亿邦动力/运营研究社转小红书电商数据 2025-04-21；网易号/电脑报 2026-05-27。详见 <b>调研/01</b>、<b>调研/03</b></p>
+</section>
+
+<!-- 3 选品系统 -->
+<section class="slide alt" aria-label="第 3 页 选品系统">
+  <div class="ghost" aria-hidden="true">03</div>
+  <p class="kicker teal">选品系统</p>
+  <h2>一套引擎，<em>读三个平台</em></h2>
+  <div class="plats">
+    <div class="plat xhs"><div class="pt">Xiaohongshu</div><h3>小红书</h3><span class="role">主战场 · 种草</span>
+      <ul><li>千帆 <b>8 个榜单</b>：阅读 / 引流 / 热卖 / 成交 × 优秀内容、优秀账号</li><li>账号打分 → 商品详情与图片采集</li><li>对标笔记逐篇拆解，聚类爆款结构</li></ul>
+      <div class="foot">虚拟商品成交额同比 <b>3.7 倍</b>，94% 是个人店</div></div>
+    <div class="plat dy"><div class="pt">Douyin</div><h3>抖音</h3><span class="role">观察场 · 看势</span>
+      <ul><li>看<b>什么品类在起量</b>、什么内容形式在跑</li><li>虚拟商品服务费约 10%、需类目报白</li><li>个人轻资产阶段<b>不主动进场</b>，只抄趋势</li></ul>
+      <div class="foot">成本把个人卖家挡门外，是趋势雷达不是主战场</div></div>
+    <div class="plat xy"><div class="pt">Xianyu</div><h3>闲鱼</h3><span class="role">成交场 · 卖货</span>
+      <ul><li>注册 <b>6 亿</b>、月活 <b>2.17 亿</b>、日均交易额破 <b>10 亿</b></li><li>知识付费类目，商品卡 + 自然搜索</li><li>成交与收藏数据<b>回流到选品</b></li></ul>
+      <div class="foot">2025-10 转转关停 C2C 后，纯 C2C 几无对标竞品</div></div>
+  </div>
+  <p class="src">来源：亿邦动力/运营研究社 2025-04-21；网易号/电脑报 2026-05-27。详见 <b>调研/01</b> 第二节、<b>调研/03</b> 第二、八节</p>
+</section>
+
+<!-- 4 工作流全景 -->
+<section class="slide" aria-label="第 4 页 工作流全景">
+  <div class="ghost" aria-hidden="true">04</div>
+  <p class="kicker">OPC 工作流 · 全景</p>
+  <h2>五步，<em>一个人跑完</em></h2>
+  <div class="flow">
+    <div class="step"><div class="no">01</div><b>选品</b><span>三平台抓当日正在被验证的方向</span><div class="who">引擎跑 · 我定方向</div></div>
+    <div class="step"><div class="no">02</div><b>机会卡</b><span>核验过的证据，收敛成一张卡</span><div class="who">引擎给 · 我拍板</div></div>
+    <div class="step"><div class="no">03</div><b>内容</b><span>关键词 → 对标拆解 → 模板 → 日更</span><div class="who">引擎产 · 我复核</div></div>
+    <div class="step"><div class="no">04</div><b>上架成交</b><span>闲鱼商品卡、咨询、发货、售后</span><div class="who">我对接</div></div>
+    <div class="step fin"><div class="no">05</div><b>数据回流</b><span>成交与收藏回到选品，形成闭环</span><div class="who">我看盘调向</div></div>
+  </div>
+  <p class="big">把<em>填空题</em>交给机器，把<em>判断题</em>留给自己。</p>
+  <p class="src">接下来五页，每一步拆开讲：<b>怎么做 + 技术怎么实现</b>。技术依据：需求雷达-分享版/AI协作/工作流总规则.md；内容系统-分享版/系统地图.md</p>
+</section>
+
+<!-- 5 拆解 01 · 选品 -->
+<section class="slide alt" aria-label="第 5 页 拆解一 选品">
+  <div class="ghost" aria-hidden="true">05</div>
+  <div class="steps-ind">
+    <span class="si on"><span class="d"></span>选品</span><span class="ln"></span>
+    <span class="si"><span class="d"></span>机会卡</span><span class="ln"></span>
+    <span class="si"><span class="d"></span>内容</span><span class="ln"></span>
+    <span class="si"><span class="d"></span>成交</span><span class="ln"></span>
+    <span class="si"><span class="d"></span>回流</span>
+  </div>
+  <p class="kicker teal">工作流拆解 · 01 / 05</p>
+  <h2>选品：从<em>三个平台</em>找出正在被验证的方向</h2>
+  <div class="asym">
+    <div>
+      <h3>怎么做<span class="en">HOW</span></h3>
+      <ul class="steps">
+        <li><span class="sn">01</span><b>跑小红书千帆 8 榜</b><span class="tagline">阅读 / 引流 / 热卖 / 成交，各取优秀内容与优秀账号，抓当日原始事实</span></li>
+        <li><span class="sn">02</span><b>看抖音趋势</b><span class="tagline">什么品类在起量、什么内容形式在跑——只观察，不进场</span></li>
+        <li><span class="sn">03</span><b>看闲鱼成交</b><span class="tagline">什么价位的虚拟商品在出单，价格带落在哪里</span></li>
+        <li><span class="sn">04</span><b>三源交叉，定方向</b><span class="tagline">三个平台同时指向的方向，才是真需求；只有一个平台热的，先观察</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="card tech" style="margin-bottom:1.1vw">
+        <div class="idx">技术实现</div><b>榜单采集 + 账号评分</b>
+        <span>采集脚本按入口当日入库原始事实；<code>score_accounts.py</code> 用<b>需求证据 × 可信度加成 × 低粉加成</b>（仅粉丝 &lt; 1000）产出「值得深挖的账号」名单。</span>
+      </div>
+      <div class="card teal">
+        <div class="idx">人机分工</div><b>引擎跑 · 我定方向</b>
+        <span>采集与评分全自动；<i>选哪个方向、放弃哪个，是我的判断题</i>。</span>
+      </div>
+    </div>
+  </div>
+  <div class="yield"><span class="yl">产出</span><span class="yv"><b>一份候选方向清单</b>——带来源与日期，<i>每个方向都能指回具体榜单条目</i>。</span></div>
+  <p class="src">技术依据：需求雷达-分享版/AI协作/子代理提示词/千帆榜单采集子代理.md、scripts/pipeline/score_accounts.py</p>
+</section>
+
+<!-- 6 拆解 02 · 机会卡 -->
+<section class="slide" aria-label="第 6 页 拆解二 机会卡">
+  <div class="ghost" aria-hidden="true">06</div>
+  <div class="steps-ind">
+    <span class="si done"><span class="d"></span>选品</span><span class="ln"></span>
+    <span class="si on"><span class="d"></span>机会卡</span><span class="ln"></span>
+    <span class="si"><span class="d"></span>内容</span><span class="ln"></span>
+    <span class="si"><span class="d"></span>成交</span><span class="ln"></span>
+    <span class="si"><span class="d"></span>回流</span>
+  </div>
+  <p class="kicker">工作流拆解 · 02 / 05</p>
+  <h2>机会卡：让<em>证据链</em>替感觉说话</h2>
+  <div class="asym">
+    <div>
+      <h3>怎么做<span class="en">HOW</span></h3>
+      <ul class="steps">
+        <li><span class="sn">01</span><b>逐个采集商品详情与本地图片</b><span class="tagline">候选账号逐个过，不抽样</span></li>
+        <li><span class="sn">02</span><b>N/N 核验</b><span class="tagline">唯一商品链接数必须等于唯一详情文件数，图片齐全，账号才进判断</span></li>
+        <li><span class="sn">03</span><b>逐张打开商品图审读</b><span class="tagline">子代理逐张看图写视觉证据，图片计数必须等于本地图片总数</span></li>
+        <li><span class="sn">04</span><b>跨账号汇总，出机会卡</b><span class="tagline">多个账号指向同一形态，才算「已验证」；单号孤例只标观察</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="card tech" style="margin-bottom:1.1vw">
+        <div class="idx">技术实现</div><b>三道闸门 + 两次复核</b>
+        <span>汇总前跑 <code>verify_deep_dive.py</code>，同步时再跑 <code>deep_dive_sync.py</code>；图片没看完的账号<b>不得进入汇总</b>。<i>AI 说「我看过了」不算，计数相等才算。</i></span>
+      </div>
+      <div class="card teal">
+        <div class="idx">人机分工</div><b>引擎给 · 我拍板</b>
+        <span>核验与汇总全自动；<i>这个品上不上、定什么价，是我的判断题</i>。</span>
+      </div>
+    </div>
+  </div>
+  <div class="yield"><span class="yl">产出</span><span class="yv"><b>一张机会卡</b>——卖什么 · 价格带 · 竞争度 · 风险提示，<i>四个字段全部有出处</i>。</span></div>
+  <p class="src">技术依据：需求雷达-分享版/AI协作/工作流总规则.md 硬边界、01-系统设计/架构总览.md、01-系统设计/需求认证规则.md</p>
+</section>
+
+<!-- 7 拆解 03 · 内容 -->
+<section class="slide alt" aria-label="第 7 页 拆解三 内容">
+  <div class="ghost" aria-hidden="true">07</div>
+  <div class="steps-ind">
+    <span class="si done"><span class="d"></span>选品</span><span class="ln"></span>
+    <span class="si done"><span class="d"></span>机会卡</span><span class="ln"></span>
+    <span class="si on"><span class="d"></span>内容</span><span class="ln"></span>
+    <span class="si"><span class="d"></span>成交</span><span class="ln"></span>
+    <span class="si"><span class="d"></span>回流</span>
+  </div>
+  <p class="kicker teal">工作流拆解 · 03 / 05</p>
+  <h2>内容：<em>结构</em>复用，<em>表达</em>自产</h2>
+  <div class="asym">
+    <div>
+      <h3>怎么做<span class="en">HOW</span></h3>
+      <ul class="steps">
+        <li><span class="sn">01</span><b>关键词三层布局</b><span class="tagline">核心词定流量、场景词定转化、长尾词定竞争度；新号不拿核心词单独做标题</span></li>
+        <li><span class="sn">02</span><b>对标笔记逐篇拆解</b><span class="tagline">只产「结构画像」：内容角度、标题公式、正文骨架、封面配图、爆因归因</span></li>
+        <li><span class="sn">03</span><b>聚类成模板，按模板日更</b><span class="tagline">模板数量由对标样本决定，不写死；一次创作，无限次复用</span></li>
+        <li><span class="sn">04</span><b>独立审查后才发</b><span class="tagline">违规词、事实核对、逐张打开封面和内页图做视觉审查</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="card tech" style="margin-bottom:1.1vw">
+        <div class="idx">技术实现</div><b>从根上避开抄表达</b>
+        <span>单笔记拆解<b>一次只看一条</b>防串位，明写「只提炼要素、不写文案」；聚类成模板「<b>只读画像，不读原文</b>，避免把原文细节混进来」；审查打不开图就判<b>阻塞</b>；另有 sha256 图片哈希比对。</span>
+      </div>
+      <div class="card teal">
+        <div class="idx">人机分工</div><b>引擎产 · 我复核</b>
+        <span>拆解、聚类、生成、初筛全自动；<i>这篇发不发、事实对不对，是我的判断题</i>。</span>
+      </div>
+    </div>
+  </div>
+  <div class="yield"><span class="yl">产出</span><span class="yv"><b>可发布的笔记 + 可复用模板</b>——单篇内容 <i>10–20 分钟</i>（有模板库，公开参照）。</span></div>
+  <p class="src">技术依据：内容系统-分享版/agents/关键词布局.md、单笔记拆解.md、聚类成模板.md、日更内容审查.md；工时参照 cpengx 2026-08-20【三方】</p>
+</section>
+
+<!-- 8 拆解 04 · 上架成交 -->
+<section class="slide" aria-label="第 8 页 拆解四 成交">
+  <div class="ghost" aria-hidden="true">08</div>
+  <div class="steps-ind">
+    <span class="si done"><span class="d"></span>选品</span><span class="ln"></span>
+    <span class="si done"><span class="d"></span>机会卡</span><span class="ln"></span>
+    <span class="si done"><span class="d"></span>内容</span><span class="ln"></span>
+    <span class="si on"><span class="d"></span>成交</span><span class="ln"></span>
+    <span class="si"><span class="d"></span>回流</span>
+  </div>
+  <p class="kicker">工作流拆解 · 04 / 05</p>
+  <h2>上架成交：把<em>货架</em>填好，接住流量</h2>
+  <div class="asym">
+    <div>
+      <h3>怎么做<span class="en">HOW</span></h3>
+      <ul class="steps">
+        <li><span class="sn">01</span><b>按上架卡填商品</b><span class="tagline">标题 = 1 核心 + 2 场景 + 1 长尾；主图放目录实拍，一眼看清有什么</span></li>
+        <li><span class="sn">02</span><b>定价把抽成算进去</b><span class="tagline">鱼小铺 1.6%、取消单笔封顶、按含运费全额计费——别按销售额倒推</span></li>
+        <li><span class="sn">03</span><b>写清交付形式与售后边界</b><span class="tagline">网盘或自动发货、几小时内交付、什么情况补发——提前说，少纠纷</span></li>
+        <li><span class="sn">04</span><b>咨询、发货、售后我对接</b><span class="tagline">交付文件内一律不放联系方式，这是永久封禁的典型场景</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="card tech" style="margin-bottom:1.1vw">
+        <div class="idx">技术实现</div><b>商品卡 + 交付链路</b>
+        <span>关键词配比与主图方案由工作台生成；闲鱼官方<b>不提供无物流发货 API</b>，自动发货靠第三方或自建，<i>先把凭证交给第三方这一层的风险想清楚</i>。</span>
+      </div>
+      <div class="card teal">
+        <div class="idx">人机分工</div><b>我对接</b>
+        <span>上架参数引擎给，<i>但谈判、售后、取舍，全部是我</i>。这是全流程里最不能自动的一段。</span>
+      </div>
+    </div>
+  </div>
+  <div class="yield"><span class="yl">产出</span><span class="yv"><b>一个能收钱的货架</b>——引流款 / 主力款 / 利润款三档就位，<i>流量来了有东西卖</i>。</span></div>
+  <p class="src">依据：网易号/电脑报 2026-05-27（闲鱼抽成与发货口径，官方规则原文未取得）；详见 <b>调研/03</b> 第三、四、五节、样例交付包/07-闲鱼商品上架卡.md</p>
+</section>
+
+<!-- 9 拆解 05 · 数据回流 -->
+<section class="slide alt" aria-label="第 9 页 拆解五 回流">
+  <div class="ghost" aria-hidden="true">09</div>
+  <div class="steps-ind">
+    <span class="si done"><span class="d"></span>选品</span><span class="ln"></span>
+    <span class="si done"><span class="d"></span>机会卡</span><span class="ln"></span>
+    <span class="si done"><span class="d"></span>内容</span><span class="ln"></span>
+    <span class="si done"><span class="d"></span>成交</span><span class="ln"></span>
+    <span class="si on"><span class="d"></span>回流</span>
+  </div>
+  <p class="kicker teal">工作流拆解 · 05 / 05</p>
+  <h2>数据回流：让系统<em>越跑越准</em></h2>
+  <div class="asym">
+    <div>
+      <h3>怎么做<span class="en">HOW</span></h3>
+      <ul class="steps">
+        <li><span class="sn">01</span><b>每周看四个数</b><span class="tagline">曝光、收藏率、商品访问、成交——收藏率 = 收藏 ÷ 曝光</span></li>
+        <li><span class="sn">02</span><b>哪个方向出单就加量</b><span class="tagline">同一模板换选题继续打，把跑赢的结构用透</span></li>
+        <li><span class="sn">03</span><b>哪个不动就砍</b><span class="tagline">连续三篇低于账号均值，换方向；不跟沉没成本较劲</span></li>
+        <li><span class="sn">04</span><b>回到第一步</b><span class="tagline">成交数据变成下一轮选品的输入，闭环合上</span></li>
+      </ul>
+    </div>
+    <div>
+      <div class="card tech" style="margin-bottom:1.1vw">
+        <div class="idx">技术实现</div><b>数据回到选品输入</b>
+        <span>成交与收藏数据回流到机会卡的「需求证据」权重；工作台按周产出复盘表，<i>把「感觉哪个好」变成「哪个数据好」</i>。</span>
+      </div>
+      <div class="card teal">
+        <div class="idx">人机分工</div><b>我看盘调向</b>
+        <span>统计自动；<i>加量还是砍掉，仍然是判断题</i>。这一步做错，前四步全白做。</span>
+      </div>
+    </div>
+  </div>
+  <div class="yield"><span class="yl">产出</span><span class="yv"><b>下一轮的选品依据</b>——不靠猜，<i>系统自己长出下一步该做什么</i>。</span></div>
+  <p class="src">依据：样例交付包/05-发布与上架日历.md 复盘指标节、04-客户旅程图.md 每日经营动线</p>
+</section>
+
+<!-- 10 变现思路 -->
+<section class="slide" aria-label="第 10 页 变现思路">
+  <div class="ghost" aria-hidden="true">10</div>
+  <p class="kicker">变现思路</p>
+  <h2><em>产品 × 流量</em>，一个矩阵</h2>
+  <div class="matrix">
+    <div class="mrow">
+      <div class="mh first">产品 ＼ 流量</div>
+      <div class="mh">小红书内容</div>
+      <div class="mh">闲鱼自然搜索</div>
+      <div class="mh">抖音趋势（二阶段）</div>
+    </div>
+    <div class="mrow">
+      <div class="rh"><span class="pn">引流款</span><span class="pp">1–9.9 元</span></div>
+      <div class="cell hi"><b>主阵地</b>爆款清单笔记挂车，换收藏与关注</div>
+      <div class="cell"><b>铺量</b>低价 SKU 吃搜索，攒评价</div>
+      <div class="cell wt">观察：什么形式在起量就抄什么</div>
+    </div>
+    <div class="mrow">
+      <div class="rh"><span class="pn">主力款</span><span class="pp">10–40 元</span></div>
+      <div class="cell"><b>场景词笔记</b>问题解决型内容导到店铺</div>
+      <div class="cell hi"><b>收入主力</b>标题带品类+场景词，主图放目录</div>
+      <div class="cell wt">二阶段复制</div>
+    </div>
+    <div class="mrow">
+      <div class="rh"><span class="pn">利润款</span><span class="pp">50 元以上</span></div>
+      <div class="cell"><b>案例型内容</b>讲「省了多少时间」</div>
+      <div class="cell"><b>详情页承接</b>可验证的附加价值支撑溢价</div>
+      <div class="cell wt">二阶段复制</div>
+    </div>
+  </div>
+  <p class="lead"><b>主力款卡在 10–40 元空档带</b>——上有原创设计溢价空间，下避 1 元价格战。价格带是平台已经投过票的：低价跑量 1–9.9 元，原创溢价 24–345 元。</p>
+  <p class="src">价格带依据：亿邦动力/运营研究社 2025-04-21，详见 <b>调研/01</b> 第三节</p>
+</section>
+
+<!-- 11 成本结构 -->
+<section class="slide alt" aria-label="第 11 页 成本结构">
+  <div class="ghost" aria-hidden="true">11</div>
+  <p class="kicker teal">一人公司为什么跑得起来</p>
+  <h2>差价全在<em>人工</em>，不在模型</h2>
+  <div id="cost-chart" role="img" aria-label="成本对比：代运营基础档折算单篇约 312 元，AI 路径全流程实测 0.3 元，工具按量公式 0.03 元，相差两到三个数量级"></div>
+  <p class="lead">代运营基础档 3000 元/月只买 8–12 篇，折合 <b>250–375 元/篇</b>；AI 路径单篇全流程实测 <span class="hl">0.3 元</span>、按量公式 <span class="hl">0.03 元起</span>。<b>差 2–3 个数量级</b>——这就是一个人能干过一个团队的原因。</p>
+  <p class="src">来源：CloudNeo 2026-08-06；cpengx 2026-08-20；ClipTurbo 定价页；腾讯云开发者社区 2026-06-02（均【三方】）。平台成本：小红书虚拟类目约 2%、免佣期内前 100 万仅 0.6%；闲鱼 2026-04-18 起鱼小铺 1.6%。详见 <b>调研/02</b> 第四节、<b>调研/03</b> 第三节</p>
+</section>
+
+<!-- 12 收尾 -->
+<section class="slide" aria-label="第 12 页 收尾">
+  <div class="ghost" aria-hidden="true">12</div>
+  <p class="kicker center" style="justify-content:center">收尾</p>
+  <p class="quote">小店不缺勤奋，<br>缺的是<em>数据和方法</em>。</p>
+  <p class="lead center" style="max-width:none;margin-top:4.2vh">平台把虚拟商品做成了专门类目，94% 的卖家是个人店，但只有 5% 月入过万。<br><b>我把自己在用的这套引擎，做成了一天只要 3–4 小时的爆款复制工厂。</b><br>三平台选品，五步工作流，小红书种草，闲鱼成交——<b>一个人跑通，再带团队复制。</b></p>
+</section>
+
+</main>
+</div>
+
+<nav class="nav" aria-label="翻页">
+  <span id="page">1 / 12</span>
+  <button type="button" id="prev" aria-label="上一页">‹</button>
+  <button type="button" id="next" aria-label="下一页">›</button>
+</nav>
+<p class="hint">← → 空格翻页 · P 导出 PDF</p>
+<div class="prog" id="prog"></div>
+
+<script src="vendor/echarts.min.js"></script>
+<script>
+(function(){
+  'use strict';
+  var slides = document.querySelectorAll('.slide');
+  var i = 0;
+  function $(id){ return document.getElementById(id); }
+
+  function show(n){
+    if (slides[i]) slides[i].classList.remove('active');
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    var cur = slides[i];
+    cur.classList.add('active');
+    cur.scrollTop = 0;
+    $('page').textContent = (i + 1) + ' / ' + slides.length;
+    $('prog').style.width = ((i + 1) / slides.length * 100) + '%';
+    countUp(cur); drawChart();
+  }
+
+  function countUp(slide){
+    var els = slide.querySelectorAll('[data-count]');
+    Array.prototype.forEach.call(els, function(el){
+      if (el.getAttribute('data-done') === '1') return;
+      el.setAttribute('data-done','1');
+      var target = parseFloat(el.getAttribute('data-count'));
+      var dec = String(target).indexOf('.') >= 0 ? 1 : 0;
+      var t0 = null, DUR = 950;
+      function step(ts){
+        if (!t0) t0 = ts;
+        var p = Math.min(1, (ts - t0) / DUR);
+        var e = 1 - Math.pow(1 - p, 3);
+        el.textContent = (target * e).toFixed(dec);
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = target.toFixed(dec);
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  var drawn = false;
+  function drawChart(){
+    if (drawn) return;
+    var el = $('cost-chart');
+    if (!el || typeof echarts === 'undefined') return;
+    if (el.offsetWidth < 10 || el.offsetHeight < 10) return;
+    drawn = true;
+    var chart = echarts.init(el, null, {renderer:'canvas'});
+    chart.setOption({
+      animationDuration:1200, animationEasing:'cubicOut',
+      grid:{left:6,right:76,top:22,bottom:4,containLabel:true},
+      tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
+        backgroundColor:'rgba(16,14,13,.95)',borderColor:'rgba(247,242,238,.16)',
+        textStyle:{color:'#f7f2ee',fontSize:12},
+        formatter:function(ps){var p=ps[0];return p.name+'<br/>单篇约 <b style="color:#ff6b60">'+p.value+' 元</b>';}},
+      xAxis:{type:'log',min:0.01,max:1000,name:'单篇内容成本（元 · 对数轴）',
+        nameTextStyle:{color:'#7d736c',fontSize:11},
+        axisLabel:{color:'#7d736c',fontSize:11,formatter:function(v){return (v>=1?v:v.toFixed(2))+' 元';}},
+        splitLine:{lineStyle:{color:'rgba(247,242,238,.06)'}},axisLine:{show:false}},
+      yAxis:{type:'category',
+        data:['代运营基础档（折算）','AI 路径 · 全流程实测','AI 路径 · 工具按量公式'],
+        axisLabel:{color:'#b8ada6',fontSize:12,fontWeight:500},
+        axisLine:{lineStyle:{color:'rgba(247,242,238,.13)'}},axisTick:{show:false}},
+      series:[{type:'bar',barWidth:'44%',
+        data:[
+          {value:312, itemStyle:{color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[{offset:0,color:'#8e0d12'},{offset:1,color:'#ff3b2f'}]}}},
+          {value:0.3, itemStyle:{color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[{offset:0,color:'#155c6b'},{offset:1,color:'#2fc0d8'}]}}},
+          {value:0.03,itemStyle:{color:{type:'linear',x:0,y:0,x2:1,y2:0,colorStops:[{offset:0,color:'#8a5c00'},{offset:1,color:'#ffb020'}]}}}
+        ],
+        label:{show:true,position:'right',fontSize:14,fontWeight:700,
+          formatter:function(p){return p.value+' 元/篇';},color:'#f7f2ee'},
+        itemStyle:{borderRadius:[0,7,7,0]},
+        showBackground:true,
+        backgroundStyle:{color:'rgba(247,242,238,.03)',borderRadius:[0,7,7,0]}
+      }]
+    });
+    window.addEventListener('resize',function(){chart.resize();});
+  }
+
+  $('prev').onclick=function(){show(i-1);};
+  $('next').onclick=function(){show(i+1);};
+  document.addEventListener('keydown',function(e){
+    if(['ArrowRight','PageDown',' '].indexOf(e.key)>=0){e.preventDefault();show(i+1);}
+    if(['ArrowLeft','PageUp'].indexOf(e.key)>=0){e.preventDefault();show(i-1);}
+    if(e.key==='Home'){e.preventDefault();show(0);}
+    if(e.key==='End'){e.preventDefault();show(slides.length-1);}
+    if(e.key==='p'||e.key==='P'){e.preventDefault();window.print();}
+  });
+  var x0=null;
+  document.addEventListener('touchstart',function(e){x0=e.touches[0].clientX;},{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(x0===null)return;
+    var dx=e.changedTouches[0].clientX-x0;
+    if(Math.abs(dx)>50) show(i+(dx<0?1:-1));
+    x0=null;
+  },{passive:true});
+
+  drawChart(); show(0);
+})();
+</script>
+</body>
+</html>
