@@ -1,15 +1,15 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """bundle-assets.py — 把演示稿的外部资源内嵌成单文件，并校验零外部依赖。
 
 用法：
     python scripts/bundle-assets.py 输入.html 输出-单文件.html
 
-处理：
-    - <link rel="stylesheet" href="...">  → 内联 <style>
-    - <script src="...">                  → 内联 <script>
-    - 相对路径的 <img src> / <video src> / poster / srcset → data URI
-    - CSS 里的 url('字体.woff2') / url('图片.png') → data URI
-    - @import  → 直接报错（先手动内联）
+处理顺序（重要，避免误伤 JS 字符串）：
+    1. <link rel=stylesheet> → 内联 <style>（其中的 url() 一并内嵌）
+    2. <style> 块与 style="..." 属性里的 url() → data URI
+    3. <img src> / <video src|poster> / srcset → data URI
+    4. 最后才内联 <script src>（JS 里的字符串不会被 CSS 正则误伤）
+    5. 校验：剥离 <script> 后仍不能有相对外链
 
 不处理 @font-face 里的 data URI（已经是内嵌的，原样保留）。
 """
@@ -17,11 +17,12 @@ import base64
 import mimetypes
 import re
 import sys
+from pathlib import Path
+
 try:
     sys.stdout.reconfigure(encoding='utf-8')
 except Exception:
     pass
-from pathlib import Path
 
 MIME = {
     '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.otf': 'font/otf',
@@ -54,17 +55,6 @@ def main():
             return None
         return p
 
-    # 1) 样式表内联
-    def inline_css(m):
-        p = resolve(m.group(1))
-        if not p:
-            return ''
-        css = p.read_text(encoding='utf-8')
-        if '@import' in css:
-            raise SystemExit(f'CSS 含 @import，需先手动内联：{p}')
-        embedded.append(p.name)
-        return '<style>\n' + inline_css_urls(css, p.parent) + '\n</style>'
-
     def inline_css_urls(css, css_dir):
         def rep(mm):
             rel = mm.group(1)
@@ -78,20 +68,31 @@ def main():
             return f"url('{to_data_uri(q)}')"
         return re.sub(r"url\(\s*['\"]?([^'\")]+)['\"]?\s*\)", rep, css)
 
-    html = re.sub(r'<link[^>]*rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\'][^>]*>', inline_css, html, flags=re.I)
-
-    # 2) 脚本内联
-    def inline_js(m):
-        attrs, rel = m.group(1), m.group(2)
-        p = resolve(rel)
+    # ---------- 1. 样式表内联 ----------
+    def inline_css(m):
+        p = resolve(m.group(1))
         if not p:
             return ''
+        css = p.read_text(encoding='utf-8')
+        if '@import' in css:
+            raise SystemExit(f'CSS 含 @import，需先手动内联：{p}')
         embedded.append(p.name)
-        return f'<script{attrs}>\n{p.read_text(encoding="utf-8")}\n</script>'
+        return '<style>\n' + inline_css_urls(css, p.parent) + '\n</style>'
 
-    html = re.sub(r'<script([^>]*)src=["\']([^"\']+)["\'][^>]*></script>', inline_js, html, flags=re.I)
+    html = re.sub(r'<link[^>]*rel=["\']stylesheet["\'][^>]*href=["\']([^"\']+)["\'][^>]*>', inline_css, html, flags=re.I)
 
-    # 3) 媒体属性内嵌
+    # ---------- 2. <style> 块与 style 属性里的 url() ----------
+    def style_block(m):
+        return '<style>' + inline_css_urls(m.group(1), base) + '</style>'
+
+    html = re.sub(r'<style>(.*?)</style>', style_block, html, flags=re.S)
+
+    def style_attr(m):
+        return 'style="' + inline_css_urls(m.group(1), base) + '"'
+
+    html = re.sub(r'style="([^"]*url\([^"]*)"', style_attr, html)
+
+    # ---------- 3. 媒体属性 ----------
     def media_rep(m):
         attr, rel = m.group(1), m.group(2)
         if rel.startswith('data:'):
@@ -104,11 +105,16 @@ def main():
 
     html = re.sub(r'(src|poster)="([^"]+)"', media_rep, html)
 
-    # 4) 内联 style 与 <style> 里的 url()
-    def style_block(m):
-        return '<style>' + inline_css_urls(m.group(1), base) + '</style>'
-    html = re.sub(r'<style>(.*?)</style>', style_block, html, flags=re.S)
-    html = re.sub(r'style="([^"]*url\([^"]*)"', lambda m: 'style="' + inline_css_urls(m.group(1), base) + '"', html)
+    # ---------- 4. 脚本内联（放到最后，避免被 CSS 正则误伤） ----------
+    def inline_js(m):
+        attrs, rel = m.group(1), m.group(2)
+        p = resolve(rel)
+        if not p:
+            return ''
+        embedded.append(p.name)
+        return f'<script{attrs}>\n{p.read_text(encoding="utf-8")}\n</script>'
+
+    html = re.sub(r'<script([^>]*)src=["\']([^"\']+)["\'][^>]*></script>', inline_js, html, flags=re.I)
 
     if missing:
         print('[MISS] resources not embedded:')
@@ -116,16 +122,17 @@ def main():
             print('  -', m)
         sys.exit(1)
 
-    # 5) 校验：不能有相对外链
-    leftover = [u for u in re.findall(r'(?:href|src)="([^"]+)"', html)
+    # ---------- 5. 校验：剥离 <script> 后不能有相对外链 ----------
+    no_scripts = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.S)
+    leftover = [u for u in re.findall(r'(?:href|src|poster)="([^"]+)"', no_scripts)
                 if not u.startswith(('data:', '#', 'http://', 'https://', 'mailto:'))]
     if leftover:
-        print('仍存在相对外链：', leftover[:10])
+        print('[MISS] still relative refs:', leftover[:10])
         sys.exit(1)
 
     dst.write_text(html, encoding='utf-8')
-    print(f'[OK] 单文件已生成: {dst}')
-    print(f'  大小：{dst.stat().st_size/1024:.0f} KB　内嵌资源 {len(set(embedded))} 个：{", ".join(sorted(set(embedded)))[:200]}')
+    print(f'[OK] single-file: {dst}')
+    print(f'     size: {dst.stat().st_size/1024:.0f} KB  embedded: {len(set(embedded))} files')
 
 
 if __name__ == '__main__':
