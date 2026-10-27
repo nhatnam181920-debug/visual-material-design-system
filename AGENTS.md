@@ -8,6 +8,8 @@
   - 选风格 → [视觉物料设计系统-ppt（html版）/DESIGN.md](<视觉物料设计系统-ppt（html版）/DESIGN.md>)
   - 具体风格细节 → `styles/<风格>/DESIGN.md`
   - 模板 → `styles/<风格>/template.html`
+  - **通用硬约束（必读）** → `排版规格.md`（8px 网格 / CJK 字体栈 / 对比度 ≥4.5 / 字号 ≤6 级）
+  - **要加动效** → `motion-kit.md`（10 个零依赖组件 + 四套风格配合矩阵）
   - 打包与验收 → `scripts/`
 
 ## 硬性边界（所有模块通用）

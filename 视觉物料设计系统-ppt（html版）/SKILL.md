@@ -25,6 +25,15 @@
 - 要「稳、正式、不出错、数据多」→ **swiss-modern**（融资/商务汇报首选）
 - 要「安静、有分量、讲故事」→ **editorial-serif**
 
+## 开始前必读两份通用文件（所有产出都要过）
+
+| 文件 | 管什么 |
+|---|---|
+| [排版规格.md](排版规格.md) | **硬约束**：8px 基线网格、CJK 优先字体栈、对比度 ≥4.5:1、字号 ≤6 级、留白下限、动效约束、禁用清单、自检清单 |
+| [motion-kit.md](motion-kit.md) | 10 个零依赖动效组件 + 与四套风格的配合矩阵（哪套能用哪些、哪套禁用哪些） |
+
+**交付前必须过 [排版规格.md](排版规格.md) 第 9 节自检清单。** 需要让 AI 按本系统干活时，从 [prompts/README.md](prompts/README.md) 选对应场景提示词。
+
 ## 2. 工作流（照做）
 
 ### 第 0 步：环境自检（30 秒，一次性）
@@ -134,7 +143,11 @@ python scripts/make-pdf.py ./qa 我的演示.pdf
 ```
 视觉物料设计系统-ppt（html版）/
 ├── SKILL.md                  ← 本文件（agent 入口）
-├── DESIGN.md                 ← 两套风格对比 + 通用规则
+├── DESIGN.md                 ← 四套风格对比 + 通用规则
+├── 排版规格.md                ← ★ 硬约束：8px 网格/CJK 字体栈/对比度≥4.5/字号≤6 级/留白/动效/禁用清单
+├── motion-kit.html + .md     ← ★ 10 个零依赖动效组件 + 与四套风格的配合矩阵
+├── prompts/README.md         ← ★ 10 个场景提示词（让 AI 按设计系统干活）
+├── UPGRADE-v3.md             ← v3 升级说明（参考 MotionSites / ReactBits / HTML Anything）
 ├── styles/
 │   ├── glass-neon/          ← 暗色玻璃拟态 + 霓虹渐变
 │   ├── 8bit-orbit/          ← 像素复古未来（字体已内嵌）

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motion Kit · 动效组件库（单文件 · 零依赖）</title>
+<!--
+  Motion Kit：从 ReactBits / Uiverse / Aceternity 的设计语言提取的「拿来即用」动效组件。
+  全部为单文件 HTML + CSS，无 JS 依赖（除 data-* 触发的一行增强脚本），可复制进任何模板。
+
+  使用方法：
+    1. 复制 <style> 里 .mk-* 的 CSS 块到你的模板
+    2. 复制对应 HTML 片段
+    3. 需要动效触发的加一行 JS（见文件末尾）
+-->
+<style>
+*{box-sizing:border-box}
+:root{
+  --mk-cyan:#5EDCF4; --mk-pink:#F0A6CA; --mk-yellow:#F4D03F;
+  --mk-ink:#111; --mk-paper:#fff;
+}
+body{background:#0A0E27;color:#fff;font-family:"Chakra Petch","PingFang SC","Microsoft YaHei",sans-serif;margin:0;padding:48px}
+
+/* ============================================================
+   1. 流光文字 Shimmer Text（ReactBits 风格）
+   ============================================================ */
+.mk-shimmer{
+  background:linear-gradient(100deg,#fff 20%,var(--mk-cyan) 40%,var(--mk-yellow) 50%,var(--mk-cyan) 60%,#fff 80%);
+  background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+  animation:mkShimmer 3.2s linear infinite;
+  font-weight:900;
+}
+@keyframes mkShimmer{to{background-position:-200% 0}}
+
+/* ============================================================
+   2. 渐变描边卡 Gradient Border Card（Aceternity 风格）
+   ============================================================ */
+.mk-gcard{position:relative;border-radius:16px;padding:1px;background:linear-gradient(140deg,rgba(94,220,244,.7),rgba(240,166,202,.25) 45%,rgba(244,208,63,.6));
+  transition:transform .4s cubic-bezier(.22,.68,.3,1)}
+.mk-gcard:hover{transform:translateY(-6px)}
+.mk-gcard>*{background:#0F1B3D;border-radius:15px;padding:26px 28px;margin:0}
+.mk-gcard h3{margin:0 0 10px;font-size:26px}
+.mk-gcard p{margin:0;font-size:19px;line-height:1.65;color:rgba(255,255,255,.72)}
+
+/* ============================================================
+   3. 光晕追卡 Spotlight Card（鼠标跟随）
+   ============================================================ */
+.mk-spot{position:relative;border-radius:16px;background:#0F1B3D;overflow:hidden;
+  border:1px solid rgba(255,255,255,.08)}
+.mk-spot::before{content:"";position:absolute;inset:0;opacity:0;transition:opacity .35s;
+  background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%),rgba(94,220,244,.18),transparent 65%)}
+.mk-spot:hover::before{opacity:1}
+.mk-spot>*{position:relative;z-index:1}
+
+/* ============================================================
+   4. 分层滚动 Parallax Stack（背景慢、内容快）
+   ============================================================ */
+.mk-parallax{position:relative;overflow:hidden}
+.mk-parallax .mk-bg{position:absolute;inset:-12% 0;z-index:0;
+  background:radial-gradient(circle at 30% 30%,rgba(94,220,244,.22),transparent 55%),
+             radial-gradient(circle at 72% 68%,rgba(240,166,202,.18),transparent 55%);
+  transform:translateY(var(--py,0));transition:transform .6s cubic-bezier(.22,.68,.3,1)}
+.mk-parallax>*:not(.mk-bg){position:relative;z-index:1}
+
+/* ============================================================
+   5. 文字逐字浮现 Stagger Reveal
+   ============================================================ */
+.mk-reveal .mk-line{display:block;overflow:hidden}
+.mk-reveal .mk-line>span{display:block;transform:translateY(110%);opacity:0;
+  transition:transform .7s cubic-bezier(.22,.68,.3,1),opacity .7s}
+.mk-reveal.on .mk-line>span{transform:none;opacity:1}
+.mk-reveal.on .mk-line:nth-child(2)>span{transition-delay:.09s}
+.mk-reveal.on .mk-line:nth-child(3)>span{transition-delay:.18s}
+.mk-reveal.on .mk-line:nth-child(4)>span{transition-delay:.27s}
+.mk-reveal.on .mk-line:nth-child(5)>span{transition-delay:.36s}
+
+/* ============================================================
+   6. 3D 倾斜卡 Tilt Card（Uiverse 风格）
+   ============================================================ */
+.mk-tilt{transform-style:preserve-3d;transition:transform .35s cubic-bezier(.22,.68,.3,1)}
+.mk-tilt>*{transform:translateZ(28px)}
+.mk-tilt:hover{transform:perspective(900px) rotateX(6deg) rotateY(-9deg) scale(1.02)}
+
+/* ============================================================
+   7. 呼吸点 Pulse Dot（状态指示 / 徽标）
+   ============================================================ */
+.mk-pulse{display:inline-flex;align-items:center;gap:10px;font-size:18px}
+.mk-pulse::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--mk-cyan);
+  box-shadow:0 0 0 0 rgba(94,220,244,.6);animation:mkPulse 2s infinite}
+@keyframes mkPulse{70%{box-shadow:0 0 0 12px rgba(94,220,244,0)}100%{box-shadow:0 0 0 0 rgba(94,220,244,0)}}
+
+/* ============================================================
+   8. 渐变流动边框 Marquee Border
+   ============================================================ */
+.mk-marquee{position:relative;border-radius:14px;padding:2px;overflow:hidden}
+.mk-marquee::before{content:"";position:absolute;inset:-150%;
+  background:conic-gradient(from 0deg,transparent 0 78%,var(--mk-cyan) 86%,var(--mk-pink) 92%,transparent 100%);
+  animation:mkSpin 4.5s linear infinite}
+.mk-marquee>*{position:relative;z-index:1;background:#0F1B3D;border-radius:12px;padding:22px 26px}
+@keyframes mkSpin{to{transform:rotate(360deg)}}
+
+/* ============================================================
+   9. 数字翻转 Count Flip
+   ============================================================ */
+.mk-flip{display:inline-block;font-variant-numeric:tabular-nums;font-weight:900}
+.mk-flip span{display:inline-block;animation:mkFlip .5s cubic-bezier(.22,.68,.3,1)}
+@keyframes mkFlip{from{transform:translateY(-60%);opacity:0}to{transform:none;opacity:1}}
+
+/* ============================================================
+   10. 背景网格 + 星点 Background Grid & Stars
+   ============================================================ */
+.mk-gridbg{position:relative;overflow:hidden}
+.mk-gridbg::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(94,220,244,.07) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(94,220,244,.07) 1px,transparent 1px);
+  background-size:40px 40px;
+  mask-image:radial-gradient(circle at 50% 40%,#000 30%,transparent 78%)}
+.mk-gridbg>*{position:relative;z-index:1}
+
+/* ============================================================
+   演示布局
+   ============================================================ */
+h1{font-size:44px;margin:0 0 8px}
+.sub{color:rgba(255,255,255,.55);margin:0 0 40px;font-size:17px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;max-width:1280px}
+.box{background:#0F1B3D;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:26px;min-height:190px}
+.tag{font-size:13px;letter-spacing:.18em;color:var(--mk-cyan);margin:0 0 12px;text-transform:uppercase}
+</style>
+</head>
+<body class="mk-gridbg">
+<h1 class="mk-shimmer">Motion Kit · 动效组件库</h1>
+<p class="sub">从 ReactBits / Uiverse / Aceternity 的设计语言提取，单文件零依赖，复制即用。鼠标移到卡片上看交互。</p>
+
+<div class="grid">
+  <div class="box">
+    <p class="tag">01 · Shimmer Text</p>
+    <h2 class="mk-shimmer" style="font-size:38px">流光标题文字</h2>
+  </div>
+
+  <div class="mk-gcard">
+    <h3>渐变描边卡</h3>
+    <p>渐变描边 + hover 上浮，适合放核心能力或卖点。</p>
+  </div>
+
+  <div class="box mk-spot" id="spot1">
+    <p class="tag">03 · Spotlight</p>
+    <h3 style="margin:0 0 10px">光晕追卡</h3>
+    <p style="margin:0;color:rgba(255,255,255,.7);font-size:18px;line-height:1.6">鼠标移动，光晕跟随。</p>
+  </div>
+
+  <div class="box">
+    <p class="tag">05 · Stagger Reveal</p>
+    <div class="mk-reveal on" id="rv1">
+      <span class="mk-line"><span>第一行逐字浮现</span></span>
+      <span class="mk-line"><span>第二行跟上</span></span>
+      <span class="mk-line"><span>第三行收尾</span></span>
+    </div>
+  </div>
+
+  <div class="box mk-tilt">
+    <p class="tag">06 · 3D Tilt</p>
+    <h3 style="margin:0 0 10px">3D 倾斜卡</h3>
+    <p style="margin:0;color:rgba(255,255,255,.7);font-size:18px;line-height:1.6">hover 时按透视倾斜，内容浮起。</p>
+  </div>
+
+  <div class="box">
+    <p class="tag">07 / 09</p>
+    <p class="mk-pulse">实时运行中</p>
+    <p style="font-size:44px;font-weight:900;margin:14px 0 0" class="mk-flip" id="flip1"><span>1,500</span></p>
+  </div>
+
+  <div class="mk-marquee">
+    <p class="tag">08 · Marquee Border</p>
+    <h3 style="margin:0 0 10px;font-size:26px">流动描边</h3>
+    <p style="margin:0;color:rgba(255,255,255,.7);font-size:18px;line-height:1.6">锥形渐变绕边框旋转。</p>
+  </div>
+
+  <div class="box mk-parallax" id="px1">
+    <div class="mk-bg"></div>
+    <p class="tag">04 · Parallax</p>
+    <h3 style="margin:0 0 10px">分层滚动</h3>
+    <p style="margin:0;color:rgba(255,255,255,.7);font-size:18px;line-height:1.6">背景层与内容层不同速度位移。</p>
+  </div>
+
+  <div class="box mk-gridbg">
+    <p class="tag">10 · Grid Background</p>
+    <h3 style="margin:0 0 10px">网格背景</h3>
+    <p style="margin:0;color:rgba(255,255,255,.7);font-size:18px;line-height:1.6">40px 网格 + 径向遮罩。</p>
+  </div>
+</div>
+
+<script>
+/* 只在需要交互时启用；删掉这段页面仍是静态可用的 */
+(function(){
+  // 03 光晕追卡
+  var spot = document.getElementById('spot1');
+  if (spot) spot.addEventListener('pointermove', function(e){
+    var r = this.getBoundingClientRect();
+    this.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    this.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  });
+  // 04 视差（页面滚动时）
+  var px = document.getElementById('px1');
+  if (px) window.addEventListener('scroll', function(){
+    var r = px.getBoundingClientRect();
+    var p = (r.top + r.height / 2 - window.innerHeight / 2) / window.innerHeight;
+    px.querySelector('.mk-bg').style.setProperty('--py', (p * 40) + 'px');
+  }, {passive:true});
+  // 09 数字翻转（演示：定时换值）
+  var flip = document.getElementById('flip1');
+  if (flip) setInterval(function(){
+    flip.innerHTML = '<span>' + (1200 + Math.floor(Math.random() * 900)).toLocaleString('en-US') + '</span>';
+  }, 2600);
+})();
+</script>
+</body>
+</html>

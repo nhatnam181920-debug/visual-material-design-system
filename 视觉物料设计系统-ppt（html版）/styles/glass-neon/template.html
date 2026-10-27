@@ -291,6 +291,20 @@ b,strong{color:hsl(var(--fg));font-weight:600}
   font-size:1.02vw;letter-spacing:.12em;text-align:center;padding:2vh 1vw;line-height:1.7}
 .slot img{max-width:100%;border-radius:12px;display:block}
 
+
+/* ============================================================
+   动效可访问性：尊重系统「减少动态效果」（排版规格库 第 7 条）
+   ============================================================ */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
+    scroll-behavior:auto !important;
+  }
+  .mk-shimmer{-webkit-text-fill-color:currentColor;color:inherit;background:none}
+  .mk-reveal .mk-line>span{transform:none;opacity:1}
+}
 </style>
 </head>
 <body>

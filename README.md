@@ -6,7 +6,7 @@
 
 | 模块 | 内容 | 状态 |
 |---|---|---|
-| [视觉物料设计系统-ppt（html版）](<视觉物料设计系统-ppt（html版）/README.md>) | 两套 16:9 HTML 演示设计系统（Glass Neon / 8-Bit Orbit）+ 可复用模板 + 打包与验收脚本 | ✅ 可用 |
+| [视觉物料设计系统-ppt（html版）](<视觉物料设计系统-ppt（html版）/README.md>) | 四套 16:9 HTML 演示设计系统（Glass Neon / 8-Bit Orbit / Swiss Modern / Editorial Serif）+ 动效组件库 + 排版规格 + 提示词库 + 打包与验收脚本 | ✅ 可用 |
 
 ## Agent 怎么用
 
